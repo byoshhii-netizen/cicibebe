@@ -2,18 +2,15 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#1a1a1a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>DEMLİK - Modern Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demlik - Modern Chat</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="loginScreen" class="screen active">
         <div class="login-container">
             <div class="login-header">
-                <h1>🫖 DEMLİK</h1>
+                <h1>☕ Demlik</h1>
                 <p>Modern Türkçe Chat Uygulaması</p>
             </div>
             
@@ -57,11 +54,10 @@
     </div>
 
     <div id="chatScreen" class="screen">
-        <div id="sidebarOverlay" class="sidebar-overlay"></div>
         <div class="chat-container">
-            <div class="sidebar" id="sidebar">
+            <div class="sidebar">
                 <div class="sidebar-header">
-                    <h2>🫖 DEMLİK</h2>
+                    <h2>☕ Demlik</h2>
                     <button id="settingsBtn" class="icon-btn" title="Ayarlar">⚙️</button>
                 </div>
 
@@ -80,7 +76,6 @@
 
                 <div class="sidebar-tabs">
                     <button class="sidebar-tab active" data-tab="channels">Kanallar</button>
-                    <button class="sidebar-tab" data-tab="messages">Mesajlar</button>
                     <button class="sidebar-tab" data-tab="users">Kullanıcılar</button>
                 </div>
 
@@ -90,13 +85,6 @@
                         <button id="createChannelBtn" class="icon-btn">+</button>
                     </div>
                     <div id="channelsContent" class="list-content"></div>
-                </div>
-
-                <div id="messagesList" class="list-container">
-                    <div class="list-header">
-                        <span>Özel Mesajlar</span>
-                    </div>
-                    <div id="messagesContent" class="list-content"></div>
                 </div>
 
                 <div id="usersList" class="list-container">
@@ -109,8 +97,6 @@
 
             <div class="main-chat">
                 <div class="chat-header">
-                    <button id="sidebarToggle" class="icon-btn mobile-only" title="Menü" aria-label="Menüyü aç">☰</button>
-                    <button id="backToSidebar" class="icon-btn mobile-only" title="Geri" aria-label="Kanal listesine dön">←</button>
                     <div class="chat-title">
                         <h3 id="chatTitle">Kanal seçin</h3>
                         <p id="chatDescription"></p>
@@ -119,7 +105,7 @@
 
                 <div id="messagesContainer" class="messages-container">
                     <div class="welcome-message">
-                        <h2>🫖 DEMLİK'e Hoş Geldiniz!</h2>
+                        <h2>☕ Demlik'e Hoş Geldiniz!</h2>
                         <p>Sohbete başlamak için bir kanal seçin.</p>
                     </div>
                 </div>
@@ -177,17 +163,10 @@
                             <span class="settings-label">Kullanıcı Adı</span>
                             <span id="settings-username" class="settings-value"></span>
                         </div>
-                        <form id="profileForm" class="profile-form">
-                            <div class="form-group">
-                                <label>Görünen Ad</label>
-                                <input type="text" id="profileDisplayName" placeholder="Görünen adınız">
-                            </div>
-                            <div class="form-group">
-                                <label>Bio</label>
-                                <textarea id="profileBio" rows="3" placeholder="Kısa bir bio yazın..."></textarea>
-                            </div>
-                            <button type="submit" class="btn-primary">Profili Güncelle</button>
-                        </form>
+                        <div class="settings-info-row">
+                            <span class="settings-label">Görünen Ad</span>
+                            <span id="settings-displayname" class="settings-value"></span>
+                        </div>
                     </div>
                     <!-- Engellenenler -->
                     <div id="settings-blocked" class="settings-panel">
@@ -201,10 +180,6 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <div id="emojiPicker" class="emoji-picker" hidden>
-        <div class="emoji-picker-grid" id="emojiPickerGrid"></div>
     </div>
 
     <script src="app.js"></script>

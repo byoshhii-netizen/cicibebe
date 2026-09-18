@@ -1,0 +1,29 @@
+{
+  "title": "CiciBebe",
+  "subtitle": "Sevgiyle büyüyen anlar",
+  "buttons": [
+    {
+      "id": "belinay",
+      "label": "Belinay",
+      "emoji": "🤍",
+      "image": "https://resimyukle.app/i/cd6XA1A5.png",
+      "color": "#f9d5ff",
+      "count": 41,
+      "lastClickedAt": "2026-09-18T20:52:56.795Z"
+    },
+    {
+      "id": "iso",
+      "label": "İso",
+      "emoji": "💫",
+      "image": "",
+      "color": "#dfe5ff",
+      "count": 11,
+      "lastClickedAt": "2026-09-18T20:53:41.085Z"
+    }
+  ],
+  "lastClicked": {
+    "buttonId": "iso",
+    "label": "İso",
+    "time": "2026-09-18T20:53:41.085Z"
+  }
+}
