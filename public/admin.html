@@ -268,6 +268,10 @@
                 <label>Foto URL</label>
                 <input type="url" id="buttonImage1" placeholder="https://..." />
               </div>
+              <div class="field">
+                <label>Toplam tıklama</label>
+                <input type="number" id="buttonCount1" min="0" step="1" value="0" />
+              </div>
             </div>
 
             <div class="button-card">
@@ -289,6 +293,10 @@
               <div class="field">
                 <label>Foto URL</label>
                 <input type="url" id="buttonImage2" placeholder="https://..." />
+              </div>
+              <div class="field">
+                <label>Toplam tıklama</label>
+                <input type="number" id="buttonCount2" min="0" step="1" value="0" />
               </div>
             </div>
           </div>
@@ -349,6 +357,8 @@
     const buttonColor2 = document.getElementById('buttonColor2');
     const buttonImage1 = document.getElementById('buttonImage1');
     const buttonImage2 = document.getElementById('buttonImage2');
+    const buttonCount1 = document.getElementById('buttonCount1');
+    const buttonCount2 = document.getElementById('buttonCount2');
 
     function updatePreview() {
       document.getElementById('previewTitle').textContent = titleInput.value || 'CiciBebe';
@@ -385,6 +395,8 @@
         buttonColor2.value = btn2.color || '#dfe5ff';
         buttonImage1.value = btn1.image || '';
         buttonImage2.value = btn2.image || '';
+        buttonCount1.value = Number(btn1.count || 0);
+        buttonCount2.value = Number(btn2.count || 0);
         updatePreview();
       } catch (error) {
         statusEl.textContent = error.message;
@@ -406,7 +418,7 @@
             emoji: buttonEmoji1.value || '✨',
             color: buttonColor1.value || '#f9d5ff',
             image: buttonImage1.value.trim(),
-            count: 0
+            count: Math.max(0, Number(buttonCount1.value) || 0)
           },
           {
             id: 'iso',
@@ -414,7 +426,7 @@
             emoji: buttonEmoji2.value || '💫',
             color: buttonColor2.value || '#dfe5ff',
             image: buttonImage2.value.trim(),
-            count: 0
+            count: Math.max(0, Number(buttonCount2.value) || 0)
           }
         ]
       };
@@ -449,6 +461,8 @@
       buttonColor2.value = '#dfe5ff';
       buttonImage1.value = '';
       buttonImage2.value = '';
+      buttonCount1.value = 0;
+      buttonCount2.value = 0;
       updatePreview();
       statusEl.textContent = 'Varsayılan ayarlar yüklendi.';
     });

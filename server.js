@@ -1109,7 +1109,7 @@ app.post('/api/cicibebe/settings', (req, res) => {
         emoji: button.emoji || current.buttons[index].emoji || '',
         image: button.image || current.buttons[index].image || '',
         color: button.color || current.buttons[index].color || '#f9d5ff',
-        count: Number(button.count) || current.buttons[index].count || 0,
+        count: Number.isFinite(Number(button.count)) ? Math.max(0, Number(button.count)) : Number(current.buttons[index].count || 0),
         lastClickedAt: button.lastClickedAt || current.buttons[index].lastClickedAt || null
       }))
     };
