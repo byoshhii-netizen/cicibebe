@@ -40,7 +40,6 @@
       border-radius: 28px;
       box-shadow: 0 28px 60px var(--shadow);
       overflow: hidden;
-      backdrop-filter: blur(12px);
     }
 
     .header {
@@ -240,7 +239,7 @@
 
           <div class="field">
             <label for="pageSubtitle">Alt Başlık</label>
-            <input id="pageSubtitle" type="text" value="Sevgiyle büyüyen anlar" />
+            <input id="pageSubtitle" type="text" value="" />
           </div>
 
           <div class="field">
@@ -307,7 +306,7 @@
         <h2>Önizleme</h2>
         <div class="preview-box">
           <div id="previewTitle" style="font-size:1.4rem; font-weight:800; text-align:center;">CiciBebe</div>
-          <div id="previewSubtitle" style="text-align:center; color: var(--muted);">Sevgiyle büyüyen anlar</div>
+          <div id="previewSubtitle" style="text-align:center; color: var(--muted);"></div>
           <div class="preview-button" id="previewButton1" style="background:#f9d5ff;">
             <span class="emoji">✨</span>
             <span>Belinay</span>
@@ -330,7 +329,7 @@
   <script>
     const defaults = {
       title: 'CiciBebe',
-      subtitle: 'Sevgiyle büyüyen anlar',
+      subtitle: '',
       buttons: [
         { id: 'belinay', label: 'Belinay', emoji: '✨', color: '#f9d5ff', image: '', count: 0, lastClickedAt: null },
         { id: 'iso', label: 'İso', emoji: '💫', color: '#dfe5ff', image: '', count: 0, lastClickedAt: null }
@@ -353,7 +352,7 @@
 
     function updatePreview() {
       document.getElementById('previewTitle').textContent = titleInput.value || 'CiciBebe';
-      document.getElementById('previewSubtitle').textContent = subtitleInput.value || 'Sevgiyle büyüyen anlar';
+      document.getElementById('previewSubtitle').textContent = subtitleInput.value || '';
       const preview1 = document.getElementById('previewButton1');
       const preview2 = document.getElementById('previewButton2');
       preview1.style.background = buttonColor1.value || '#f9d5ff';

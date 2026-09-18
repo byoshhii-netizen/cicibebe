@@ -42,7 +42,7 @@ function getDefaultCicibebeSettings() {
   const rankStep = 12;
   return {
     title: 'CiciBebe',
-    subtitle: 'Sevgiyle büyüyen anlar',
+    subtitle: '',
     rankStep,
     ranks: generateRankTable(rankStep, 100),
     buttons: [
@@ -109,6 +109,7 @@ function readCicibebeSettings() {
     return {
       ...defaults,
       ...parsed,
+      subtitle: '',
       rankStep,
       ranks,
       buttons: Array.isArray(parsed.buttons) && parsed.buttons.length === 2
@@ -1097,7 +1098,7 @@ app.post('/api/cicibebe/settings', (req, res) => {
     const next = {
       ...current,
       title: title || current.title || 'CiciBebe',
-      subtitle: subtitle || current.subtitle || 'Sevgiyle büyüyen anlar',
+      subtitle: '',
       rankStep: newRankStep,
       ranks: nextRanks,
       buttons: buttons.map((button, index) => ({

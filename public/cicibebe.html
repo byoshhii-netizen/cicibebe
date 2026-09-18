@@ -51,7 +51,6 @@
       background: rgba(28, 11, 39, 0.32);
       box-shadow: 0 30px 80px var(--shadow);
       border: 1px solid rgba(255,255,255,0.12);
-      backdrop-filter: blur(14px);
       overflow: hidden;
       isolation: isolate;
     }
@@ -65,9 +64,9 @@
       height: 320px;
       border-radius: 50%;
       background: rgba(255,255,255,0.08);
-      filter: blur(18px);
+      filter: blur(8px);
       z-index: -1;
-      animation: floatBlob 12s ease-in-out infinite alternate;
+      opacity: 0.55;
     }
 
     .page-shell::before {
@@ -78,12 +77,6 @@
     .page-shell::after {
       right: -20px;
       bottom: -120px;
-      animation-delay: 5s;
-    }
-
-    @keyframes floatBlob {
-      0% { transform: translateY(0) scale(1); }
-      100% { transform: translateY(22px) scale(1.08); }
     }
 
     .topbar {
@@ -260,7 +253,6 @@
       padding: 8px 14px;
       font-weight: 700;
       color: var(--text);
-      backdrop-filter: blur(6px);
       font-size: 0.95rem;
     }
 
@@ -293,7 +285,7 @@
     .roadmap-item.current { color: #281331; background: #ffe59a; font-weight: 800; }
     .vote-card.is-clicked .vote-button { animation: clickPulse 0.38s ease; }
     @keyframes clickPulse { 40% { transform: scale(1.1); box-shadow: 0 0 0 14px rgba(255,229,154,0.08), 0 18px 32px rgba(0,0,0,0.2); } }
-    .rank-up { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 20px; background: rgba(18, 5, 27, 0.58); backdrop-filter: blur(7px); animation: fadeIn 0.22s ease; }
+    .rank-up { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 20px; background: rgba(18, 5, 27, 0.82); animation: fadeIn 0.22s ease; }
     .rank-up.hidden { display: none; }
     .rank-up-card { width: min(380px, 100%); padding: 28px 22px; border: 1px solid rgba(255,229,154,0.55); border-radius: 26px; text-align: center; background: linear-gradient(145deg, rgba(93,37,105,0.96), rgba(35,13,49,0.98)); box-shadow: 0 25px 70px rgba(0,0,0,0.4); animation: rankRise 0.48s cubic-bezier(.2,.8,.2,1); }
     .rank-up-icon { font-size: 3.6rem; color: #ffe59a; animation: iconSpin 0.7s ease; }
@@ -321,7 +313,6 @@
       position: fixed;
       inset: 0;
       background: rgba(19, 8, 25, 0.72);
-      backdrop-filter: blur(8px);
       display: grid;
       place-items: center;
       z-index: 100;
@@ -450,7 +441,7 @@
 
     <header class="hero">
       <h1 id="pageTitle" class="title">CiciBebe</h1>
-      <p id="pageSubtitle" class="subtitle">Sevgiyle büyüyen anlar</p>
+      <p id="pageSubtitle" class="subtitle" hidden></p>
     </header>
 
     <main class="vote-wrap" id="voteWrap" aria-live="polite"></main>
@@ -462,7 +453,7 @@
   <script>
     const state = {
       title: 'CiciBebe',
-      subtitle: 'Sevgiyle büyüyen anlar',
+      subtitle: '',
       buttons: [],
       ranks: [],
       lastClicked: null,
@@ -570,7 +561,8 @@
 
     function render() {
       titleEl.textContent = state.title || 'CiciBebe';
-      subtitleEl.textContent = state.subtitle || 'Sevgiyle büyüyen anlar';
+      subtitleEl.textContent = state.subtitle || '';
+      subtitleEl.hidden = !state.subtitle;
 
       voteWrap.innerHTML = '';
       const allowed = resolveAllowedButton(state.playerName);
@@ -651,7 +643,7 @@
         const data = await response.json();
         if (data.success && data.settings) {
           state.title = data.settings.title || state.title;
-          state.subtitle = data.settings.subtitle || state.subtitle;
+          state.subtitle = data.settings.subtitle || '';
           state.buttons = data.settings.buttons || [];
           state.ranks = data.settings.ranks || [];
           state.lastClicked = data.settings.lastClicked || null;
