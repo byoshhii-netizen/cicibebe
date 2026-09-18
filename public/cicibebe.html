@@ -347,6 +347,15 @@
       color: #fff;
     }
 
+    .presence-note {
+      margin: 8px auto 0;
+      max-width: 620px;
+      min-height: 20px;
+      text-align: center;
+      color: rgba(255,255,255,0.62);
+      font-size: 0.8rem;
+    }
+
     .name-gate {
       position: fixed;
       inset: 0;
@@ -502,6 +511,7 @@
     <main class="vote-wrap" id="voteWrap" aria-live="polite"></main>
 
     <div class="status-bar" id="statusBar">İlk tıklamanı sen yap!</div>
+    <div class="presence-note" id="presenceNote" aria-live="polite"></div>
   </div>
   <div id="rankUp" class="rank-up hidden" aria-live="assertive"></div>
 
@@ -512,6 +522,7 @@
       buttons: [],
       ranks: [],
       lastClicked: null,
+      lastLogins: {},
       playerName: ''
     };
 
@@ -523,6 +534,7 @@
     const nameForm = document.getElementById('nameForm');
     const playerNameInput = document.getElementById('playerNameInput');
     const activePlayer = document.getElementById('activePlayer');
+    const presenceNote = document.getElementById('presenceNote');
 
     function normalizeName(value) {
       return String(value || '')
@@ -565,6 +577,7 @@
       state.playerName = '';
       localStorage.removeItem('cicibebe-player-name');
       renderActivePlayer();
+      renderPresenceNote();
       nameGate.classList.remove('hidden');
       statusBar.textContent = 'İlk tıklamanı sen yap!';
       playerNameInput.focus();
@@ -607,8 +620,18 @@
       }).format(date);
     }
 
+    function renderPresenceNote() {
+      const active = resolveAllowedButton(state.playerName);
+      const other = active === 'belinay' ? 'iso' : active === 'iso' ? 'belinay' : null;
+      const otherLabel = other === 'iso' ? 'İso' : 'Belinay';
+      const lastLogin = other ? state.lastLogins[other] : null;
+      presenceNote.textContent = other
+        ? `${otherLabel} en son ${lastLogin ? formatTime(lastLogin) : 'henüz katılmadı'}.`
+        : '';
+    }
+
     function rankState(button) {
-      const ranks = state.ranks.length ? state.ranks : [{ id: 1, label: 'Başlangıç', icon: 'fas fa-seedling', threshold: 0 }];
+      const ranks = state.ranks.length ? state.ranks : [{ id: 1, label: '1. Başlangıç', icon: 'fas fa-seedling', threshold: 0 }];
       let currentIndex = 0;
       ranks.forEach((rank, index) => { if ((button.count || 0) >= Number(rank.threshold || 0)) currentIndex = index; });
       const current = ranks[currentIndex];
@@ -706,6 +729,7 @@
       } else {
         statusBar.textContent = 'Iso olarak tıklama hakkın açık.';
       }
+      renderPresenceNote();
     }
 
     async function loadSettings() {
@@ -722,6 +746,22 @@
         }
       } catch (error) {
         console.error('Ayarlar alınamadı', error);
+      }
+    }
+
+    async function loadPresenceLogs() {
+      try {
+        const response = await fetch('/api/cicibebe/logs');
+        const data = await response.json();
+        state.lastLogins = {};
+        (data.entries || []).forEach((entry) => {
+          if (entry.type === 'login' && entry.player && !state.lastLogins[entry.player]) {
+            state.lastLogins[entry.player] = entry.when;
+          }
+        });
+        renderPresenceNote();
+      } catch (error) {
+        renderPresenceNote();
       }
     }
 
@@ -769,7 +809,9 @@
       }
 
       setPlayerName(entered);
-      fetch('/api/cicibebe/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: entered }) }).catch(() => {});
+      fetch('/api/cicibebe/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: entered }) })
+        .then(() => loadPresenceLogs())
+        .catch(() => {});
       loadSettings();
     });
 
@@ -788,6 +830,7 @@
     }
 
     renderActivePlayer();
+    loadPresenceLogs();
     loadSettings();
   </script>
 </body>

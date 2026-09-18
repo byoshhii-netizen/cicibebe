@@ -23,7 +23,7 @@ function generateRankTable(step = 12, totalRanks = 100) {
 
   for (let index = 0; index < totalRanks; index += 1) {
     const threshold = index === 0 ? 0 : index * step;
-    const label = index === 0 ? 'Başlangıç' : `Rütbe ${index + 1}`;
+    const label = index === 0 ? '1. Başlangıç' : `Rütbe ${index + 1}`;
     const icon = icons[Math.min(icons.length - 1, Math.floor(index / 10))];
     table.push({
       id: index + 1,
@@ -101,7 +101,7 @@ function readCicibebeSettings() {
           ...rank,
           id: rank.id || index + 1,
           threshold: Number.isFinite(Number(rank.threshold)) ? Math.max(0, Number(rank.threshold)) : index * rankStep,
-          label: rank.label || defaults.ranks[index]?.label || `Rütbe ${index + 1}`,
+          label: rank.label || defaults.ranks[index]?.label || (index === 0 ? '1. Başlangıç' : `Rütbe ${index + 1}`),
           icon: rank.icon || defaults.ranks[index]?.icon || '✨'
         }))
       : generateRankTable(rankStep, 100);
