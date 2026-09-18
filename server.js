@@ -13,7 +13,12 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 function generateRankTable(step = 12, totalRanks = 100) {
-  const icons = ['🌱', '🌿', '🌼', '✨', '⭐', '💎', '🏆', '👑', '🔥', '🚀'];
+  const icons = [
+    'fas fa-seedling', 'fas fa-leaf', 'fas fa-clover', 'fas fa-spa', 'fas fa-sun',
+    'fas fa-moon', 'fas fa-star', 'fas fa-gem', 'fas fa-bolt', 'fas fa-fire',
+    'fas fa-crown', 'fas fa-trophy', 'fas fa-medal', 'fas fa-shield-halved', 'fas fa-feather',
+    'fas fa-wand-magic-sparkles', 'fas fa-heart', 'fas fa-rocket', 'fas fa-satellite', 'fas fa-dragon'
+  ];
   const table = [];
 
   for (let index = 0; index < totalRanks; index += 1) {
@@ -95,7 +100,7 @@ function readCicibebeSettings() {
           ...defaults.ranks[index],
           ...rank,
           id: rank.id || index + 1,
-          threshold: Number(rank.threshold) || index === 0 ? 0 : index * rankStep,
+          threshold: Number.isFinite(Number(rank.threshold)) ? Math.max(0, Number(rank.threshold)) : index * rankStep,
           label: rank.label || defaults.ranks[index]?.label || `Rütbe ${index + 1}`,
           icon: rank.icon || defaults.ranks[index]?.icon || '✨'
         }))
@@ -1043,6 +1048,32 @@ app.get('/api/cicibebe/logs', (req, res) => {
   }
 });
 
+app.post('/api/cicibebe/login', (req, res) => {
+  try {
+    const normalizedName = normalizePlayerName(req.body?.name);
+    const buttonId = normalizedName === 'belinay' ? 'belinay' : normalizedName === 'iso' ? 'iso' : null;
+    if (!buttonId) return res.status(403).json({ error: 'Adın Belinay veya Iso olmalı.' });
+
+    const ip = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket.remoteAddress || 'unknown')
+      .toString().split(',')[0].trim();
+    const auditLog = readCicibebeAuditLog();
+    auditLog.entries.push({
+      id: Date.now() + Math.random(),
+      type: 'login',
+      when: new Date().toISOString(),
+      player: normalizedName,
+      buttonId,
+      ip,
+      userAgent: req.headers['user-agent'] || 'unknown'
+    });
+    writeCicibebeAuditLog(auditLog.entries.slice(-500));
+    res.json({ success: true });
+  } catch (error) {
+    console.error('CiciBebe giriş logu yazılamadı:', error);
+    res.status(500).json({ error: 'Giriş kaydedilemedi' });
+  }
+});
+
 app.post('/api/cicibebe/settings', (req, res) => {
   try {
     const { buttons, title, subtitle, rankStep } = req.body || {};
@@ -1057,7 +1088,7 @@ app.post('/api/cicibebe/settings', (req, res) => {
           ...current.ranks[index],
           ...rank,
           id: rank.id || index + 1,
-          threshold: Number(rank.threshold) || 0,
+          threshold: Number.isFinite(Number(rank.threshold)) ? Math.max(0, Number(rank.threshold)) : index * newRankStep,
           label: rank.label || current.ranks[index]?.label || `Rütbe ${index + 1}`,
           icon: rank.icon || current.ranks[index]?.icon || '✨'
         }))

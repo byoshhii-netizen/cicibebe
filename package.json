@@ -7,7 +7,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "electron": "electron .",
-    "build": "electron-builder",
+    "build": "node --check server.js",
     "dist": "electron-builder --publish=never"
   },
   "keywords": ["chat", "teatube", "messaging"],
