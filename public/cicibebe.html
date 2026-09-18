@@ -361,6 +361,10 @@
       display: none;
     }
 
+    .name-gate.already-known {
+      display: none;
+    }
+
     .name-card {
       width: min(420px, 100%);
       background: rgba(31, 16, 40, 0.9);
@@ -473,6 +477,16 @@
       </form>
     </div>
   </div>
+
+  <script>
+    (() => {
+      const savedName = localStorage.getItem('cicibebe-player-name') || '';
+      const normalized = savedName.trim().toLowerCase().replace(/ı/g, 'i');
+      if (normalized === 'belinay' || normalized === 'iso') {
+        document.getElementById('nameGate').classList.add('already-known');
+      }
+    })();
+  </script>
 
   <div class="page-shell">
     <div class="topbar">
