@@ -339,6 +339,7 @@
           <div class="field"><label>Toplam tıklama</label><input data-field="count" type="number" min="0" step="1" value="${Number(person.count || 0)}" /></div>
         </div>`).join('');
       document.querySelectorAll('[data-remove-person]').forEach((button) => button.addEventListener('click', () => {
+        people = collectPeople();
         people.splice(Number(button.dataset.removePerson), 1);
         renderPeopleEditor();
       }));
@@ -429,6 +430,7 @@
     });
 
     document.getElementById('addPerson').addEventListener('click', () => {
+      people = collectPeople();
       people.push({ id: makeId('Yeni Kişi'), label: 'Yeni Kişi', emoji: '💖', color: '#f9d5ff', image: '', count: 0 });
       renderPeopleEditor();
     });

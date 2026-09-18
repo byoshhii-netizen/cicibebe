@@ -1214,17 +1214,20 @@ app.post('/api/cicibebe/settings', (req, res) => {
       backgroundColor: /^#[0-9a-f]{6}$/i.test(backgroundColor) ? backgroundColor : current.backgroundColor,
       rankStep: newRankStep,
       ranks: nextRanks,
-      buttons: buttons.map((button, index) => ({
-        ...current.buttons[index],
-        ...button,
-        id: button.id || `kisi-${index + 1}`,
-        label: button.label || `Kişi ${index + 1}`,
-        emoji: button.emoji || current.buttons[index].emoji || '',
-        image: button.image || current.buttons[index].image || '',
-        color: button.color || current.buttons[index].color || '#f9d5ff',
-        count: Number.isFinite(Number(button.count)) ? Math.max(0, Number(button.count)) : Number(current.buttons[index].count || 0),
-        lastClickedAt: button.lastClickedAt || current.buttons[index].lastClickedAt || null
-      }))
+      buttons: buttons.map((button, index) => {
+        const existing = current.buttons.find((item) => item.id === button.id) || current.buttons[index] || {};
+        return {
+          ...existing,
+          ...button,
+          id: button.id || existing.id || `kisi-${index + 1}`,
+          label: button.label || existing.label || `Kişi ${index + 1}`,
+          emoji: button.emoji || existing.emoji || '💖',
+          image: button.image || existing.image || '',
+          color: button.color || existing.color || '#f9d5ff',
+          count: Number.isFinite(Number(button.count)) ? Math.max(0, Number(button.count)) : Number(existing.count || 0),
+          lastClickedAt: button.lastClickedAt || existing.lastClickedAt || null
+        };
+      })
     };
 
     writeCicibebeSettings(next);
