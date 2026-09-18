@@ -356,6 +356,36 @@
       font-size: 0.8rem;
     }
 
+    .notes-panel {
+      width: min(100%, 720px);
+      margin: 18px auto 0;
+      padding: 16px;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 20px;
+      background: rgba(255,255,255,0.06);
+    }
+
+    .notes-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .notes-title { display: flex; align-items: center; gap: 8px; font-weight: 800; }
+    .notes-title i { color: #ffe59a; }
+    .notes-target { color: rgba(255,255,255,0.58); font-size: 0.76rem; }
+    .note-form { display: flex; gap: 8px; }
+    .note-form textarea { min-height: 42px; flex: 1; resize: vertical; border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; padding: 10px 12px; color: var(--text); background: rgba(0,0,0,0.16); font: inherit; outline: none; }
+    .note-form textarea:focus { border-color: rgba(255,229,154,0.7); }
+    .note-form button, .note-delete { border: 0; border-radius: 12px; cursor: pointer; font: inherit; font-weight: 800; }
+    .note-form button { align-self: stretch; padding: 0 15px; color: #281331; background: #ffe59a; }
+    .notes-list { display: grid; gap: 8px; margin-top: 12px; }
+    .note-card { padding: 11px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; background: rgba(0,0,0,0.13); }
+    .note-card.note-incoming { border-color: rgba(255,229,154,0.3); background: rgba(255,229,154,0.08); }
+    .note-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: rgba(255,255,255,0.62); font-size: 0.72rem; }
+    .note-author { color: var(--text); font-weight: 800; }
+    .note-content { margin-top: 6px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.45; font-size: 0.88rem; }
+    .note-actions { display: flex; align-items: center; gap: 8px; }
+    .note-seen { color: #baf5cc; }
+    .note-delete { padding: 3px 7px; color: #ffd0df; background: rgba(255,100,145,0.13); font-size: 0.7rem; }
+    .notes-empty { color: rgba(255,255,255,0.55); font-size: 0.8rem; text-align: center; padding: 10px; }
+    @media (max-width: 520px) { .note-form { flex-direction: column; } .note-form button { min-height: 40px; } }
+
     .name-gate {
       position: fixed;
       inset: 0;
@@ -512,6 +542,17 @@
 
     <div class="status-bar" id="statusBar">İlk tıklamanı sen yap!</div>
     <div class="presence-note" id="presenceNote" aria-live="polite"></div>
+    <section class="notes-panel" id="notesPanel" hidden>
+      <div class="notes-heading">
+        <div class="notes-title"><i class="fas fa-envelope-open-text"></i> Notlar</div>
+        <div class="notes-target" id="notesTarget"></div>
+      </div>
+      <form class="note-form" id="noteForm">
+        <textarea id="noteInput" maxlength="500" placeholder="Karşı tarafa bir not bırak..."></textarea>
+        <button type="submit"><i class="fas fa-paper-plane"></i> Gönder</button>
+      </form>
+      <div class="notes-list" id="notesList"></div>
+    </section>
   </div>
   <div id="rankUp" class="rank-up hidden" aria-live="assertive"></div>
 
@@ -535,6 +576,11 @@
     const playerNameInput = document.getElementById('playerNameInput');
     const activePlayer = document.getElementById('activePlayer');
     const presenceNote = document.getElementById('presenceNote');
+    const notesPanel = document.getElementById('notesPanel');
+    const notesTarget = document.getElementById('notesTarget');
+    const noteForm = document.getElementById('noteForm');
+    const noteInput = document.getElementById('noteInput');
+    const notesList = document.getElementById('notesList');
 
     function normalizeName(value) {
       return String(value || '')
@@ -578,6 +624,7 @@
       localStorage.removeItem('cicibebe-player-name');
       renderActivePlayer();
       renderPresenceNote();
+      notesPanel.hidden = true;
       nameGate.classList.remove('hidden');
       statusBar.textContent = 'İlk tıklamanı sen yap!';
       playerNameInput.focus();
@@ -628,6 +675,38 @@
       presenceNote.textContent = other
         ? `${otherLabel} en son ${lastLogin ? formatTime(lastLogin) : 'henüz katılmadı'}.`
         : '';
+    }
+
+    function displayName(player) {
+      return player === 'iso' ? 'İso' : 'Belinay';
+    }
+
+    function renderNotes(notes) {
+      const active = resolveAllowedButton(state.playerName);
+      const target = active === 'belinay' ? 'iso' : active === 'iso' ? 'belinay' : null;
+      notesPanel.hidden = !active;
+      if (!active) return;
+      notesTarget.textContent = `${displayName(target)} kişisine not bırak`;
+      notesList.innerHTML = notes.length ? notes.map((note) => {
+        const mine = note.sender === active;
+        const seen = mine && note.viewedAt ? `<span class="note-seen"><i class="fas fa-check-double"></i> Görüldü</span>` : mine ? '<span>Bekliyor</span>' : '<span class="note-seen">Yeni not</span>';
+        const deleteButton = mine ? `<button type="button" class="note-delete" data-note-id="${escapeHtml(note.id)}"><i class="fas fa-trash"></i> Sil</button>` : '';
+        return `<article class="note-card ${mine ? '' : 'note-incoming'}"><div class="note-card-head"><span><span class="note-author">${displayName(note.sender)}</span> · ${formatTime(note.createdAt)}</span><span class="note-actions">${seen}${deleteButton}</span></div><div class="note-content">${escapeHtml(note.content)}</div></article>`;
+      }).join('') : '<div class="notes-empty">Henüz not yok. İlk notu sen bırak.</div>';
+    }
+
+    async function loadNotes() {
+      const active = resolveAllowedButton(state.playerName);
+      if (!active) { notesPanel.hidden = true; return; }
+      try {
+        const response = await fetch(`/api/cicibebe/notes?name=${encodeURIComponent(active)}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Notlar yüklenemedi');
+        renderNotes(data.notes || []);
+      } catch (error) {
+        notesPanel.hidden = false;
+        notesList.innerHTML = '<div class="notes-empty">Notlar şu an yüklenemedi.</div>';
+      }
     }
 
     function rankState(button) {
@@ -813,6 +892,38 @@
         .then(() => loadPresenceLogs())
         .catch(() => {});
       loadSettings();
+      loadNotes();
+    });
+
+    noteForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const sender = resolveAllowedButton(state.playerName);
+      const content = noteInput.value.trim();
+      if (!sender || !content) return;
+      const submitButton = noteForm.querySelector('button');
+      submitButton.disabled = true;
+      try {
+        const response = await fetch('/api/cicibebe/notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sender, content })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Not gönderilemedi');
+        noteInput.value = '';
+        await loadNotes();
+      } catch (error) {
+        statusBar.textContent = error.message;
+      } finally {
+        submitButton.disabled = false;
+      }
+    });
+
+    notesList.addEventListener('click', async (event) => {
+      const button = event.target.closest('.note-delete');
+      if (!button) return;
+      const response = await fetch(`/api/cicibebe/notes/${encodeURIComponent(button.dataset.noteId)}?sender=${encodeURIComponent(resolveAllowedButton(state.playerName))}`, { method: 'DELETE' });
+      if (response.ok) loadNotes();
     });
 
     const logoutButton = document.createElement('button');
@@ -831,7 +942,9 @@
 
     renderActivePlayer();
     loadPresenceLogs();
+    loadNotes();
     loadSettings();
+    setInterval(loadNotes, 8000);
   </script>
 </body>
 </html>

@@ -159,6 +159,27 @@ function writeCicibebeAuditLog(entries) {
   fs.writeFileSync(filePath, JSON.stringify({ entries }, null, 2));
 }
 
+function readCicibebeNotes() {
+  const filePath = path.join(dataDir, 'cicibebe-notes.json');
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, JSON.stringify({ notes: [] }, null, 2));
+    return { notes: [] };
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    return Array.isArray(parsed.notes) ? { notes: parsed.notes } : { notes: [] };
+  } catch (error) {
+    fs.writeFileSync(filePath, JSON.stringify({ notes: [] }, null, 2));
+    return { notes: [] };
+  }
+}
+
+function writeCicibebeNotes(notes) {
+  const filePath = path.join(dataDir, 'cicibebe-notes.json');
+  fs.writeFileSync(filePath, JSON.stringify({ notes }, null, 2));
+}
+
 function getButtonRankState(buttonCount, settings = null) {
   const resolved = settings || readCicibebeSettings();
   const rankTable = Array.isArray(resolved.ranks) && resolved.ranks.length ? resolved.ranks : generateRankTable(resolved.rankStep || 12, 100);
@@ -1072,6 +1093,75 @@ app.post('/api/cicibebe/login', (req, res) => {
   } catch (error) {
     console.error('CiciBebe giriş logu yazılamadı:', error);
     res.status(500).json({ error: 'Giriş kaydedilemedi' });
+  }
+});
+
+app.get('/api/cicibebe/notes', (req, res) => {
+  try {
+    const player = normalizePlayerName(req.query.name);
+    if (!['belinay', 'iso'].includes(player)) return res.status(403).json({ error: 'Geçersiz kişi.' });
+
+    const noteData = readCicibebeNotes();
+    let changed = false;
+    const notes = noteData.notes
+      .filter((note) => note.sender === player || note.recipient === player)
+      .map((note) => {
+        if (note.recipient === player && !note.viewedAt) {
+          note.viewedAt = new Date().toISOString();
+          changed = true;
+        }
+        return note;
+      })
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    if (changed) writeCicibebeNotes(noteData.notes.slice(-200));
+    res.json({ success: true, notes });
+  } catch (error) {
+    console.error('CiciBebe notları okunamadı:', error);
+    res.status(500).json({ error: 'Notlar yüklenemedi' });
+  }
+});
+
+app.post('/api/cicibebe/notes', (req, res) => {
+  try {
+    const sender = normalizePlayerName(req.body?.sender);
+    const recipient = sender === 'belinay' ? 'iso' : sender === 'iso' ? 'belinay' : null;
+    const content = String(req.body?.content || '').trim();
+    if (!recipient) return res.status(403).json({ error: 'Geçersiz kişi.' });
+    if (!content) return res.status(400).json({ error: 'Not boş olamaz.' });
+    if (content.length > 500) return res.status(400).json({ error: 'Not en fazla 500 karakter olabilir.' });
+
+    const note = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      sender,
+      recipient,
+      content,
+      createdAt: new Date().toISOString(),
+      viewedAt: null
+    };
+    const noteData = readCicibebeNotes();
+    noteData.notes.push(note);
+    writeCicibebeNotes(noteData.notes.slice(-200));
+    res.json({ success: true, note });
+  } catch (error) {
+    console.error('CiciBebe notu kaydedilemedi:', error);
+    res.status(500).json({ error: 'Not kaydedilemedi' });
+  }
+});
+
+app.delete('/api/cicibebe/notes/:id', (req, res) => {
+  try {
+    const sender = normalizePlayerName(req.body?.sender || req.query.sender);
+    const noteData = readCicibebeNotes();
+    const note = noteData.notes.find((item) => item.id === req.params.id);
+    if (!note) return res.status(404).json({ error: 'Not bulunamadı' });
+    if (note.sender !== sender) return res.status(403).json({ error: 'Bu notu yalnızca gönderen silebilir.' });
+
+    writeCicibebeNotes(noteData.notes.filter((item) => item.id !== req.params.id));
+    res.json({ success: true });
+  } catch (error) {
+    console.error('CiciBebe notu silinemedi:', error);
+    res.status(500).json({ error: 'Not silinemedi' });
   }
 });
 
