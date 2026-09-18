@@ -119,6 +119,13 @@
       margin-top: 8px;
     }
 
+    .people-editor { display: grid; gap: 14px; margin-top: 8px; }
+    .person-editor { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 18px; padding: 16px; }
+    .person-editor-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .person-editor-head h3 { margin: 0; font-size: 1rem; }
+    .person-remove { border: 1px solid rgba(255,120,150,0.35); border-radius: 10px; padding: 6px 9px; color: #ffd0df; background: rgba(255,100,145,0.1); cursor: pointer; }
+    .add-person { border: 1px dashed rgba(255,229,154,0.5); border-radius: 12px; padding: 10px; color: #ffe59a; background: rgba(255,229,154,0.06); cursor: pointer; font: inherit; font-weight: 800; }
+
     .button-card {
       background: rgba(255,255,255,0.04);
       border: 1px solid var(--border);
@@ -247,59 +254,13 @@
             <input id="rankStep" type="number" min="1" step="1" value="12" />
           </div>
 
-          <div class="button-grid">
-            <div class="button-card">
-              <h3>Belinay</h3>
-              <div class="field">
-                <label>Etiket</label>
-                <input type="text" id="buttonLabel1" value="Belinay" />
-              </div>
-              <div class="small-row">
-                <div class="field">
-                  <label>Emoji</label>
-                  <input type="text" id="buttonEmoji1" value="✨" maxlength="2" />
-                </div>
-                <div class="field">
-                  <label>Renk</label>
-                  <input type="color" id="buttonColor1" value="#f9d5ff" />
-                </div>
-              </div>
-              <div class="field">
-                <label>Foto URL</label>
-                <input type="url" id="buttonImage1" placeholder="https://..." />
-              </div>
-              <div class="field">
-                <label>Toplam tıklama</label>
-                <input type="number" id="buttonCount1" min="0" step="1" value="0" />
-              </div>
-            </div>
-
-            <div class="button-card">
-              <h3>İso</h3>
-              <div class="field">
-                <label>Etiket</label>
-                <input type="text" id="buttonLabel2" value="İso" />
-              </div>
-              <div class="small-row">
-                <div class="field">
-                  <label>Emoji</label>
-                  <input type="text" id="buttonEmoji2" value="💫" maxlength="2" />
-                </div>
-                <div class="field">
-                  <label>Renk</label>
-                  <input type="color" id="buttonColor2" value="#dfe5ff" />
-                </div>
-              </div>
-              <div class="field">
-                <label>Foto URL</label>
-                <input type="url" id="buttonImage2" placeholder="https://..." />
-              </div>
-              <div class="field">
-                <label>Toplam tıklama</label>
-                <input type="number" id="buttonCount2" min="0" step="1" value="0" />
-              </div>
-            </div>
+          <div class="field">
+            <label for="backgroundColor">Site arka plan rengi</label>
+            <input id="backgroundColor" type="color" value="#2a0d35" />
           </div>
+
+          <div id="peopleEditor" class="people-editor"></div>
+          <button type="button" class="add-person" id="addPerson"><i class="fas fa-user-plus"></i> Yeni kişi ekle</button>
 
           <div class="actions">
             <button type="button" class="secondary" id="resetBtn">Sıfırla</button>
@@ -341,34 +302,67 @@
       buttons: [
         { id: 'belinay', label: 'Belinay', emoji: '✨', color: '#f9d5ff', image: '', count: 0, lastClickedAt: null },
         { id: 'iso', label: 'İso', emoji: '💫', color: '#dfe5ff', image: '', count: 0, lastClickedAt: null }
-      ]
+      ],
+      backgroundColor: '#2a0d35'
     };
+
+    let people = [];
+
+    function escHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[character]));
+    }
 
     const form = document.getElementById('settingsForm');
     const statusEl = document.getElementById('status');
     const titleInput = document.getElementById('pageTitle');
     const subtitleInput = document.getElementById('pageSubtitle');
     const rankStepInput = document.getElementById('rankStep');
-    const buttonLabel1 = document.getElementById('buttonLabel1');
-    const buttonLabel2 = document.getElementById('buttonLabel2');
-    const buttonEmoji1 = document.getElementById('buttonEmoji1');
-    const buttonEmoji2 = document.getElementById('buttonEmoji2');
-    const buttonColor1 = document.getElementById('buttonColor1');
-    const buttonColor2 = document.getElementById('buttonColor2');
-    const buttonImage1 = document.getElementById('buttonImage1');
-    const buttonImage2 = document.getElementById('buttonImage2');
-    const buttonCount1 = document.getElementById('buttonCount1');
-    const buttonCount2 = document.getElementById('buttonCount2');
+    const backgroundColor = document.getElementById('backgroundColor');
+
+    function makeId(label) {
+      const base = String(label || 'kisi').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'kisi';
+      let id = base;
+      let index = 2;
+      while (people.some((person) => person.id === id)) id = `${base}-${index++}`;
+      return id;
+    }
+
+    function renderPeopleEditor() {
+      document.getElementById('peopleEditor').innerHTML = people.map((person, index) => `
+        <div class="person-editor" data-person-index="${index}">
+          <div class="person-editor-head"><h3>${person.label || `Kişi ${index + 1}`}</h3>${people.length > 2 ? `<button type="button" class="person-remove" data-remove-person="${index}"><i class="fas fa-trash"></i> Sil</button>` : ''}</div>
+          <div class="field"><label>Girişte yazılacak isim</label><input data-field="label" type="text" value="${escHtml(person.label || '')}" required /></div>
+          <div class="small-row"><div class="field"><label>Emoji</label><input data-field="emoji" type="text" maxlength="4" value="${escHtml(person.emoji || '💖')}" /></div><div class="field"><label>Renk</label><input data-field="color" type="color" value="${/^#[0-9a-f]{6}$/i.test(person.color) ? person.color : '#f9d5ff'}" /></div></div>
+          <div class="field"><label>Foto URL</label><input data-field="image" type="url" value="${escHtml(person.image || '')}" placeholder="https://..." /></div>
+          <div class="field"><label>Toplam tıklama</label><input data-field="count" type="number" min="0" step="1" value="${Number(person.count || 0)}" /></div>
+        </div>`).join('');
+      document.querySelectorAll('[data-remove-person]').forEach((button) => button.addEventListener('click', () => {
+        people.splice(Number(button.dataset.removePerson), 1);
+        renderPeopleEditor();
+      }));
+    }
+
+    function collectPeople() {
+      return [...document.querySelectorAll('.person-editor')].map((editor, index) => {
+        const old = people[index] || {};
+        const value = (field) => editor.querySelector(`[data-field="${field}"]`).value;
+        return { ...old, id: old.id || makeId(value('label')), label: value('label').trim(), emoji: value('emoji') || '💖', color: value('color') || '#f9d5ff', image: value('image').trim(), count: Math.max(0, Number(value('count')) || 0) };
+      });
+    }
 
     function updatePreview() {
       document.getElementById('previewTitle').textContent = titleInput.value || 'CiciBebe';
       document.getElementById('previewSubtitle').textContent = subtitleInput.value || '';
       const preview1 = document.getElementById('previewButton1');
       const preview2 = document.getElementById('previewButton2');
-      preview1.style.background = buttonColor1.value || '#f9d5ff';
-      preview2.style.background = buttonColor2.value || '#dfe5ff';
-      preview1.innerHTML = `<span class="emoji">${buttonEmoji1.value || '✨'}</span><span>${buttonLabel1.value || 'Belinay'}</span>`;
-      preview2.innerHTML = `<span class="emoji">${buttonEmoji2.value || '💫'}</span><span>${buttonLabel2.value || 'İso'}</span>`;
+      const first = people[0] || defaults.buttons[0];
+      const second = people[1] || defaults.buttons[1];
+      preview1.style.background = first.color || '#f9d5ff';
+      preview2.style.background = second.color || '#dfe5ff';
+      preview1.innerHTML = `<span class="emoji">${escHtml(first.emoji || '✨')}</span><span>${escHtml(first.label || 'Belinay')}</span>`;
+      preview2.innerHTML = `<span class="emoji">${escHtml(second.emoji || '💫')}</span><span>${escHtml(second.label || 'İso')}</span>`;
     }
 
     async function loadSettings() {
@@ -383,20 +377,9 @@
         titleInput.value = settings.title || defaults.title;
         subtitleInput.value = settings.subtitle || defaults.subtitle;
         rankStepInput.value = settings.rankStep || 12;
-
-        const btn1 = settings.buttons?.[0] || defaults.buttons[0];
-        const btn2 = settings.buttons?.[1] || defaults.buttons[1];
-
-        buttonLabel1.value = btn1.label || 'Belinay';
-        buttonLabel2.value = btn2.label || 'İso';
-        buttonEmoji1.value = btn1.emoji || '✨';
-        buttonEmoji2.value = btn2.emoji || '💫';
-        buttonColor1.value = btn1.color || '#f9d5ff';
-        buttonColor2.value = btn2.color || '#dfe5ff';
-        buttonImage1.value = btn1.image || '';
-        buttonImage2.value = btn2.image || '';
-        buttonCount1.value = Number(btn1.count || 0);
-        buttonCount2.value = Number(btn2.count || 0);
+        backgroundColor.value = settings.backgroundColor || '#2a0d35';
+        people = (settings.buttons?.length ? settings.buttons : defaults.buttons).map((person) => ({ ...person }));
+        renderPeopleEditor();
         updatePreview();
       } catch (error) {
         statusEl.textContent = error.message;
@@ -409,27 +392,12 @@
 
       const payload = {
         title: titleInput.value.trim() || defaults.title,
-        subtitle: subtitleInput.value.trim() || defaults.subtitle,
+        subtitle: '',
         rankStep: Math.max(1, Number(rankStepInput.value) || 12),
-        buttons: [
-          {
-            id: 'belinay',
-            label: buttonLabel1.value.trim() || 'Belinay',
-            emoji: buttonEmoji1.value || '✨',
-            color: buttonColor1.value || '#f9d5ff',
-            image: buttonImage1.value.trim(),
-            count: Math.max(0, Number(buttonCount1.value) || 0)
-          },
-          {
-            id: 'iso',
-            label: buttonLabel2.value.trim() || 'İso',
-            emoji: buttonEmoji2.value || '💫',
-            color: buttonColor2.value || '#dfe5ff',
-            image: buttonImage2.value.trim(),
-            count: Math.max(0, Number(buttonCount2.value) || 0)
-          }
-        ]
+        backgroundColor: backgroundColor.value || '#2a0d35',
+        buttons: collectPeople()
       };
+      if (payload.buttons.length < 2 || payload.buttons.some((person) => !person.label)) { statusEl.textContent = 'En az iki kişinin adı dolu olmalı.'; return; }
 
       try {
         const response = await fetch('/api/cicibebe/settings', {
@@ -453,22 +421,16 @@
     document.getElementById('resetBtn').addEventListener('click', () => {
       titleInput.value = defaults.title;
       subtitleInput.value = defaults.subtitle;
-      buttonLabel1.value = 'Belinay';
-      buttonLabel2.value = 'İso';
-      buttonEmoji1.value = '✨';
-      buttonEmoji2.value = '💫';
-      buttonColor1.value = '#f9d5ff';
-      buttonColor2.value = '#dfe5ff';
-      buttonImage1.value = '';
-      buttonImage2.value = '';
-      buttonCount1.value = 0;
-      buttonCount2.value = 0;
+      backgroundColor.value = '#2a0d35';
+      people = defaults.buttons.map((person) => ({ ...person }));
+      renderPeopleEditor();
       updatePreview();
       statusEl.textContent = 'Varsayılan ayarlar yüklendi.';
     });
 
-    ['pageTitle', 'pageSubtitle', 'buttonLabel1', 'buttonLabel2', 'buttonEmoji1', 'buttonEmoji2', 'buttonColor1', 'buttonColor2'].forEach(id => {
-      document.getElementById(id).addEventListener('input', updatePreview);
+    document.getElementById('addPerson').addEventListener('click', () => {
+      people.push({ id: makeId('Yeni Kişi'), label: 'Yeni Kişi', emoji: '💖', color: '#f9d5ff', image: '', count: 0 });
+      renderPeopleEditor();
     });
 
     async function loadLogs() {

@@ -414,6 +414,17 @@
       text-align: center;
     }
 
+    .name-card-logo {
+      width: 68px;
+      height: 68px;
+      display: block;
+      object-fit: cover;
+      margin: 0 auto 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+    }
+
     .name-card h2 {
       margin: 0 0 10px;
       font-size: clamp(1.8rem, 4vw, 2.5rem);
@@ -509,6 +520,7 @@
 <body>
   <div id="nameGate" class="name-gate">
     <div class="name-card">
+      <img class="name-card-logo" src="/cicibebe.png" alt="CiciBebe" onerror="this.style.display='none'" />
       <h2>Adın nedir?</h2>
       <form id="nameForm" class="name-form">
         <input id="playerNameInput" type="text" maxlength="40" placeholder="İsmini yaz..." autocomplete="off" />
@@ -521,7 +533,7 @@
     (() => {
       const savedName = localStorage.getItem('cicibebe-player-name') || '';
       const normalized = savedName.trim().toLowerCase().replace(/ı/g, 'i');
-      if (normalized === 'belinay' || normalized === 'iso') {
+      if (normalized) {
         document.getElementById('nameGate').classList.add('already-known');
       }
     })();
@@ -545,7 +557,7 @@
     <section class="notes-panel" id="notesPanel" hidden>
       <div class="notes-heading">
         <div class="notes-title"><i class="fas fa-envelope-open-text"></i> Notlar</div>
-        <div class="notes-target" id="notesTarget"></div>
+        <div class="notes-target"><label for="notesTarget">Alıcı</label> <select id="notesTarget"></select></div>
       </div>
       <form class="note-form" id="noteForm">
         <textarea id="noteInput" maxlength="500" placeholder="Karşı tarafa bir not bırak..."></textarea>
@@ -595,9 +607,9 @@
 
     function resolveAllowedButton(name) {
       const normalized = normalizeName(name);
-      if (normalized === 'belinay') return 'belinay';
-      if (normalized === 'iso') return 'iso';
-      return null;
+      if (!state.buttons.length && normalized) return normalized;
+      const button = state.buttons.find((item) => normalizeName(item.id) === normalized || normalizeName(item.label) === normalized);
+      return button ? button.id : null;
     }
 
     function escapeHtml(value) {
@@ -637,7 +649,7 @@
         state.playerName = name || '';
         nameGate.classList.remove('hidden');
         if (name) {
-          statusBar.textContent = 'Geçersiz isim. Lütfen sadece Belinay veya Iso gir.';
+          statusBar.textContent = 'Geçersiz isim. Lütfen kayıtlı bir kişi seç.';
         } else {
           statusBar.textContent = 'İlk tıklamanı sen yap!';
         }
@@ -669,8 +681,9 @@
 
     function renderPresenceNote() {
       const active = resolveAllowedButton(state.playerName);
-      const other = active === 'belinay' ? 'iso' : active === 'iso' ? 'belinay' : null;
-      const otherLabel = other === 'iso' ? 'İso' : 'Belinay';
+      const otherButton = state.buttons.find((button) => button.id !== active);
+      const other = otherButton?.id;
+      const otherLabel = otherButton?.label || 'Diğer kişi';
       const lastLogin = other ? state.lastLogins[other] : null;
       presenceNote.textContent = other
         ? `${otherLabel} en son ${lastLogin ? formatTime(lastLogin) : 'henüz katılmadı'}.`
@@ -678,15 +691,17 @@
     }
 
     function displayName(player) {
-      return player === 'iso' ? 'İso' : 'Belinay';
+      return state.buttons.find((button) => button.id === player)?.label || player;
     }
 
     function renderNotes(notes) {
       const active = resolveAllowedButton(state.playerName);
-      const target = active === 'belinay' ? 'iso' : active === 'iso' ? 'belinay' : null;
       notesPanel.hidden = !active;
       if (!active) return;
-      notesTarget.textContent = `${displayName(target)} kişisine not bırak`;
+      const selectedTarget = notesTarget.value;
+      const recipients = state.buttons.filter((button) => button.id !== active);
+      notesTarget.innerHTML = recipients.map((button) => `<option value="${escapeHtml(button.id)}">${escapeHtml(button.label)}</option>`).join('');
+      if (recipients.some((button) => button.id === selectedTarget)) notesTarget.value = selectedTarget;
       notesList.innerHTML = notes.length ? notes.map((note) => {
         const mine = note.sender === active;
         const seen = mine && note.viewedAt ? `<span class="note-seen"><i class="fas fa-check-double"></i> Görüldü</span>` : mine ? '<span>Bekliyor</span>' : '<span class="note-seen">Yeni not</span>';
@@ -803,10 +818,8 @@
         statusBar.innerHTML = `<strong>${state.lastClicked.label}</strong> en son ${formatTime(state.lastClicked.time)} tarihinde tıkladı.`;
       } else if (!state.playerName || !resolveAllowedButton(state.playerName)) {
         statusBar.textContent = 'İlk tıklamanı sen yap!';
-      } else if (resolveAllowedButton(state.playerName) === 'belinay') {
-        statusBar.textContent = 'Belinay olarak tıklama hakkın açık.';
       } else {
-        statusBar.textContent = 'Iso olarak tıklama hakkın açık.';
+        statusBar.textContent = `${state.playerName} olarak tıklama hakkın açık.`;
       }
       renderPresenceNote();
     }
@@ -816,11 +829,16 @@
         const response = await fetch('/api/cicibebe/settings');
         const data = await response.json();
         if (data.success && data.settings) {
-          state.title = data.settings.title || state.title;
+            document.documentElement.style.setProperty('--bg-1', data.settings.backgroundColor || '#2a0d35');
+            state.title = data.settings.title || state.title;
           state.subtitle = data.settings.subtitle || '';
           state.buttons = data.settings.buttons || [];
           state.ranks = data.settings.ranks || [];
           state.lastClicked = data.settings.lastClicked || null;
+          if (state.playerName && !resolveAllowedButton(state.playerName)) {
+            logoutPlayer();
+            return;
+          }
           render();
         }
       } catch (error) {
@@ -882,7 +900,7 @@
       const allowed = resolveAllowedButton(entered);
 
       if (!allowed) {
-        statusBar.textContent = 'Lütfen sadece Belinay veya Iso yaz.';
+        statusBar.textContent = 'Lütfen kayıtlı bir kişi adı yaz.';
         playerNameInput.focus();
         return;
       }
@@ -898,15 +916,16 @@
     noteForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const sender = resolveAllowedButton(state.playerName);
+      const recipient = notesTarget.value;
       const content = noteInput.value.trim();
-      if (!sender || !content) return;
+      if (!sender || !recipient || !content) return;
       const submitButton = noteForm.querySelector('button');
       submitButton.disabled = true;
       try {
         const response = await fetch('/api/cicibebe/notes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sender, content })
+          body: JSON.stringify({ sender, recipient, content })
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Not gönderilemedi');

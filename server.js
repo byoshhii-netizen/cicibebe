@@ -44,6 +44,7 @@ function getDefaultCicibebeSettings() {
     title: 'CiciBebe',
     subtitle: '',
     rankStep,
+    backgroundColor: '#2a0d35',
     ranks: generateRankTable(rankStep, 100),
     buttons: [
       {
@@ -84,6 +85,11 @@ function normalizePlayerName(name) {
     .replace(/[^a-z]/g, '');
 }
 
+function getCicibebeButtonByName(settings, name) {
+  const normalized = normalizePlayerName(name);
+  return (settings.buttons || []).find((button) => normalizePlayerName(button.id) === normalized || normalizePlayerName(button.label) === normalized) || null;
+}
+
 function readCicibebeSettings() {
   const filePath = path.join(dataDir, 'cicibebe-settings.json');
   if (!fs.existsSync(filePath)) {
@@ -112,14 +118,22 @@ function readCicibebeSettings() {
       subtitle: '',
       rankStep,
       ranks,
-      buttons: Array.isArray(parsed.buttons) && parsed.buttons.length === 2
+      backgroundColor: /^#[0-9a-f]{6}$/i.test(parsed.backgroundColor) ? parsed.backgroundColor : defaults.backgroundColor,
+      buttons: Array.isArray(parsed.buttons) && parsed.buttons.length >= 2
         ? parsed.buttons.map((button, index) => ({
-            ...defaults.buttons[index],
+            ...(defaults.buttons[index] || {
+              id: `kisi-${index + 1}`,
+              label: `Kişi ${index + 1}`,
+              emoji: '💖',
+              color: '#f9d5ff',
+              count: 0,
+              lastClickedAt: null
+            }),
             ...button,
-            id: button.id || defaults.buttons[index].id,
-            label: button.label || defaults.buttons[index].label,
+            id: button.id || `kisi-${index + 1}`,
+            label: button.label || `Kişi ${index + 1}`,
             image: button.image || '',
-            emoji: button.emoji || defaults.buttons[index].emoji,
+            emoji: button.emoji || '💖',
             count: Number(button.count) || 0,
             lastClickedAt: button.lastClickedAt || null
           }))
@@ -1072,9 +1086,10 @@ app.get('/api/cicibebe/logs', (req, res) => {
 
 app.post('/api/cicibebe/login', (req, res) => {
   try {
+    const settings = readCicibebeSettings();
     const normalizedName = normalizePlayerName(req.body?.name);
-    const buttonId = normalizedName === 'belinay' ? 'belinay' : normalizedName === 'iso' ? 'iso' : null;
-    if (!buttonId) return res.status(403).json({ error: 'Adın Belinay veya Iso olmalı.' });
+    const button = getCicibebeButtonByName(settings, normalizedName);
+    if (!button) return res.status(403).json({ error: 'Bu isimle kayıtlı bir kişi bulunamadı.' });
 
     const ip = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket.remoteAddress || 'unknown')
       .toString().split(',')[0].trim();
@@ -1084,7 +1099,7 @@ app.post('/api/cicibebe/login', (req, res) => {
       type: 'login',
       when: new Date().toISOString(),
       player: normalizedName,
-      buttonId,
+      buttonId: button.id,
       ip,
       userAgent: req.headers['user-agent'] || 'unknown'
     });
@@ -1098,8 +1113,10 @@ app.post('/api/cicibebe/login', (req, res) => {
 
 app.get('/api/cicibebe/notes', (req, res) => {
   try {
-    const player = normalizePlayerName(req.query.name);
-    if (!['belinay', 'iso'].includes(player)) return res.status(403).json({ error: 'Geçersiz kişi.' });
+    const settings = readCicibebeSettings();
+    const playerButton = getCicibebeButtonByName(settings, req.query.name);
+    if (!playerButton) return res.status(403).json({ error: 'Geçersiz kişi.' });
+    const player = playerButton.id;
 
     const noteData = readCicibebeNotes();
     let changed = false;
@@ -1124,10 +1141,13 @@ app.get('/api/cicibebe/notes', (req, res) => {
 
 app.post('/api/cicibebe/notes', (req, res) => {
   try {
-    const sender = normalizePlayerName(req.body?.sender);
-    const recipient = sender === 'belinay' ? 'iso' : sender === 'iso' ? 'belinay' : null;
+    const settings = readCicibebeSettings();
+    const senderButton = getCicibebeButtonByName(settings, req.body?.sender);
+    const recipientButton = getCicibebeButtonByName(settings, req.body?.recipient);
+    const sender = senderButton?.id;
+    const recipient = recipientButton?.id;
     const content = String(req.body?.content || '').trim();
-    if (!recipient) return res.status(403).json({ error: 'Geçersiz kişi.' });
+    if (!sender || !recipient || sender === recipient) return res.status(403).json({ error: 'Geçersiz kişi.' });
     if (!content) return res.status(400).json({ error: 'Not boş olamaz.' });
     if (content.length > 500) return res.status(400).json({ error: 'Not en fazla 500 karakter olabilir.' });
 
@@ -1151,7 +1171,9 @@ app.post('/api/cicibebe/notes', (req, res) => {
 
 app.delete('/api/cicibebe/notes/:id', (req, res) => {
   try {
-    const sender = normalizePlayerName(req.body?.sender || req.query.sender);
+    const settings = readCicibebeSettings();
+    const senderButton = getCicibebeButtonByName(settings, req.body?.sender || req.query.sender);
+    const sender = senderButton?.id;
     const noteData = readCicibebeNotes();
     const note = noteData.notes.find((item) => item.id === req.params.id);
     if (!note) return res.status(404).json({ error: 'Not bulunamadı' });
@@ -1167,9 +1189,9 @@ app.delete('/api/cicibebe/notes/:id', (req, res) => {
 
 app.post('/api/cicibebe/settings', (req, res) => {
   try {
-    const { buttons, title, subtitle, rankStep } = req.body || {};
-    if (!Array.isArray(buttons) || buttons.length !== 2) {
-      return res.status(400).json({ error: 'İki buton bilgisi gerekli' });
+    const { buttons, title, subtitle, rankStep, backgroundColor } = req.body || {};
+    if (!Array.isArray(buttons) || buttons.length < 2) {
+      return res.status(400).json({ error: 'En az iki kişi bilgisi gerekli' });
     }
 
     const current = readCicibebeSettings();
@@ -1189,13 +1211,14 @@ app.post('/api/cicibebe/settings', (req, res) => {
       ...current,
       title: title || current.title || 'CiciBebe',
       subtitle: '',
+      backgroundColor: /^#[0-9a-f]{6}$/i.test(backgroundColor) ? backgroundColor : current.backgroundColor,
       rankStep: newRankStep,
       ranks: nextRanks,
       buttons: buttons.map((button, index) => ({
         ...current.buttons[index],
         ...button,
-        id: button.id || current.buttons[index].id,
-        label: button.label || current.buttons[index].label,
+        id: button.id || `kisi-${index + 1}`,
+        label: button.label || `Kişi ${index + 1}`,
         emoji: button.emoji || current.buttons[index].emoji || '',
         image: button.image || current.buttons[index].image || '',
         color: button.color || current.buttons[index].color || '#f9d5ff',
@@ -1214,19 +1237,18 @@ app.post('/api/cicibebe/settings', (req, res) => {
 
 app.post('/api/cicibebe/vote', (req, res) => {
   try {
+    const settings = readCicibebeSettings();
     const { buttonId, name } = req.body || {};
-    const normalizedName = normalizePlayerName(name);
-    const allowedButton = normalizedName === 'belinay' ? 'belinay' : normalizedName === 'iso' ? 'iso' : null;
+    const allowedButton = getCicibebeButtonByName(settings, name);
 
     if (!allowedButton) {
-      return res.status(403).json({ error: 'Adın Belinay veya Iso olmalı.' });
+      return res.status(403).json({ error: 'Bu isimle kayıtlı bir kişi bulunamadı.' });
     }
 
-    if (buttonId !== allowedButton) {
+    if (buttonId !== allowedButton.id) {
       return res.status(403).json({ error: 'Bu tuşa basma yetkin yok.' });
     }
 
-    const settings = readCicibebeSettings();
     const button = settings.buttons.find(item => item.id === buttonId);
 
     if (!button) {
@@ -1248,7 +1270,7 @@ app.post('/api/cicibebe/vote', (req, res) => {
     const logEntry = {
       id: Date.now() + Math.random(),
       when: new Date().toISOString(),
-      player: normalizedName,
+      player: allowedButton.id,
       buttonId: button.id,
       buttonLabel: button.label,
       count: button.count,
